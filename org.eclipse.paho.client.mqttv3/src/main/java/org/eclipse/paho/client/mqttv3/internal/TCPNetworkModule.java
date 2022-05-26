@@ -22,9 +22,11 @@ import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
+import java.net.InetAddress;
 
 import javax.net.SocketFactory;
 
+import org.eclipse.paho.client.mqttv3.IMqttDns;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.logging.Logger;
 import org.eclipse.paho.client.mqttv3.logging.LoggerFactory;
@@ -41,6 +43,7 @@ public class TCPNetworkModule implements NetworkModule {
 	private String host;
 	private int port;
 	private int conTimeout;
+	private IMqttDns dns;
 
 	/**
 	 * Constructs a new TCPNetworkModule using the specified host and
@@ -59,6 +62,14 @@ public class TCPNetworkModule implements NetworkModule {
 
 	}
 
+	public TCPNetworkModule(SocketFactory factory, String host, int port, String resourceContext, IMqttDns dns) {
+		log.setResourceName(resourceContext);
+		this.factory = factory;
+		this.host = host;
+		this.port = port;
+		this.dns = dns;
+	}
+
 	/**
 	 * Starts the module, by creating a TCP socket to the server.
 	 * @throws IOException if there is an error creating the socket
@@ -69,7 +80,13 @@ public class TCPNetworkModule implements NetworkModule {
 		try {
 			// @TRACE 252=connect to host {0} port {1} timeout {2}
 			log.fine(CLASS_NAME,methodName, "252", new Object[] {host, Integer.valueOf(port), Long.valueOf(conTimeout*1000)});
-			SocketAddress sockaddr = new InetSocketAddress(host, port);
+			final SocketAddress sockaddr;
+			if (dns != null) {
+				InetAddress inetAddr = dns.lookup(host);
+				sockaddr = new InetSocketAddress(inetAddr, port);
+			} else {
+				sockaddr = new InetSocketAddress(host, port); // default system resolver
+			}
 			socket = factory.createSocket();
 			socket.connect(sockaddr, conTimeout*1000);
 			socket.setSoTimeout(1000);
