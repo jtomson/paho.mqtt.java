@@ -25,6 +25,7 @@ import java.util.Map;
 import javax.net.ssl.SSLSocketFactory;
 
 import org.eclipse.paho.client.mqttv3.IMqttDns;
+import org.eclipse.paho.client.mqttv3.IMqttHandshakeErrorCallback;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.internal.SSLNetworkModule;
 import org.eclipse.paho.client.mqttv3.logging.Logger;
@@ -42,6 +43,7 @@ public class WebSocketSecureNetworkModule extends SSLNetworkModule{
 	private int port;
 	private final boolean skipPortDuringHandshake;
 	private Map<String, String> customWebSocketHeaders;
+	private IMqttHandshakeErrorCallback handshakeErrorCallback;
 	ByteBuffer recievedPayload;
 	
 	/**
@@ -52,7 +54,7 @@ public class WebSocketSecureNetworkModule extends SSLNetworkModule{
 	private ByteArrayOutputStream outputStream = new ExtendedByteArrayOutputStream(this);
 
 
-	public WebSocketSecureNetworkModule(SSLSocketFactory factory, String uri, String host, int port, String clientId, Map<String, String> customWebSocketHeaders, boolean skipPortDuringHandshake, IMqttDns dns) {
+	public WebSocketSecureNetworkModule(SSLSocketFactory factory, String uri, String host, int port, String clientId, Map<String, String> customWebSocketHeaders, boolean skipPortDuringHandshake, IMqttDns dns, IMqttHandshakeErrorCallback handshakeErrorCallback) {
 		super(factory, host, port, clientId, dns);
 		this.uri = uri;
 		this.host = host;
@@ -60,12 +62,13 @@ public class WebSocketSecureNetworkModule extends SSLNetworkModule{
 		this.customWebSocketHeaders = customWebSocketHeaders;
 		this.pipedInputStream = new PipedInputStream();
 		this.skipPortDuringHandshake = skipPortDuringHandshake;
+		this.handshakeErrorCallback = handshakeErrorCallback;
 		log.setResourceName(clientId);
 	}
 
 	public void start() throws IOException, MqttException {
 		super.start();
-		WebSocketHandshake handshake = new WebSocketHandshake(super.getInputStream(), super.getOutputStream(), uri, host, port, customWebSocketHeaders, skipPortDuringHandshake);
+		WebSocketHandshake handshake = new WebSocketHandshake(super.getInputStream(), super.getOutputStream(), uri, host, port, customWebSocketHeaders, skipPortDuringHandshake, handshakeErrorCallback);
 		handshake.execute();
 		this.webSocketReceiver = new WebSocketReceiver(getSocketInputStream(), pipedInputStream);
 		webSocketReceiver.start("WssSocketReceiver");

@@ -58,6 +58,8 @@ public class MqttConnectOptions {
 	 */
 	public static final int MQTT_VERSION_3_1_1 = 4;
 
+	private IMqttHandshakeErrorCallback handshakeErrorCallback;
+
 	private int keepAliveInterval = KEEP_ALIVE_INTERVAL_DEFAULT;
 	private int maxInflight = MAX_INFLIGHT_DEFAULT;
 	private String willDestination = null;
@@ -666,6 +668,14 @@ public class MqttConnectOptions {
 	 */
 	public void setExecutorServiceTimeout(int executorServiceTimeout) {
 		this.executorServiceTimeout = executorServiceTimeout;
+	}
+
+	public void setHandshakeErrorCallback(IMqttHandshakeErrorCallback callback) {
+		this.handshakeErrorCallback = callback;
+	}
+
+	public IMqttHandshakeErrorCallback getHandshakeErrorCallback() {
+		return this.handshakeErrorCallback;
 	}
 
 	/**

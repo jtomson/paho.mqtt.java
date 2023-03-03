@@ -15,6 +15,8 @@
  */
 package org.eclipse.paho.client.mqttv3.internal.websocket;
 
+import org.eclipse.paho.client.mqttv3.IMqttHandshakeErrorCallback;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -25,13 +27,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-import java.util.Properties;
-import java.util.Set;
-import java.util.Iterator;
+import java.util.*;
+
 /**
  * Helper class to execute a WebSocket Handshake.
  */
@@ -51,6 +48,7 @@ public class WebSocketHandshake {
 	private static final String HTTP_HEADER_SEC_WEBSOCKET_PROTOCOL = "sec-websocket-protocol";
 
 	private final boolean skipPortDuringHandshake;
+	private IMqttHandshakeErrorCallback errorCallback;
 
 	InputStream input;
 	OutputStream output;
@@ -59,7 +57,7 @@ public class WebSocketHandshake {
 	int port;
 	Map<String, String> customWebSocketHeaders;
 
-	public WebSocketHandshake(InputStream input, OutputStream output, String uri, String host, int port, Map<String, String> customWebSocketHeaders, boolean skipPortDuringHandshake){
+	public WebSocketHandshake(InputStream input, OutputStream output, String uri, String host, int port, Map<String, String> customWebSocketHeaders, boolean skipPortDuringHandshake, IMqttHandshakeErrorCallback errorCallback){
 		this.input = input;
 		this.output = output;
 		this.uri = uri;
@@ -67,6 +65,7 @@ public class WebSocketHandshake {
 		this.port = port;
 		this.customWebSocketHeaders = customWebSocketHeaders;
 		this.skipPortDuringHandshake = skipPortDuringHandshake;
+		this.errorCallback = errorCallback;
 	}
 
 
@@ -144,7 +143,11 @@ public class WebSocketHandshake {
 		ArrayList<String> responseLines = new ArrayList<String>();
 		String line = in.readLine();
 		if(line == null){
-			throw new IOException("WebSocket Response header: Invalid response from Server, It may not support WebSockets.");
+			IOException e = new IOException("WebSocket Response header: Invalid response from Server, It may not support WebSockets.");
+			if (errorCallback != null) {
+				errorCallback.onHandshakeError(null, e);
+			}
+			throw e;
 		}
 		while(!line.equals(EMPTY) ) {
 			responseLines.add(line);
@@ -154,29 +157,53 @@ public class WebSocketHandshake {
 
 		String connectionHeader = (String) headerMap.get(HTTP_HEADER_CONNECTION);
 		if (connectionHeader == null || connectionHeader.equalsIgnoreCase(HTTP_HEADER_CONNECTION_VALUE)) {
-			throw new IOException("WebSocket Response header: Incorrect connection header");
+			IOException e = new IOException("WebSocket Response header: Incorrect connection header");
+			if (errorCallback != null) {
+				errorCallback.onHandshakeError(responseLines.toString(), e);
+			}
+			throw e;
 		}
 
 		String upgradeHeader = (String) headerMap.get(HTTP_HEADER_UPGRADE);
 		if(upgradeHeader == null || !upgradeHeader.toLowerCase().contains(HTTP_HEADER_UPGRADE_WEBSOCKET)){
-			throw new IOException("WebSocket Response header: Incorrect upgrade.");
+			IOException e =  new IOException("WebSocket Response header: Incorrect upgrade.");
+			if (errorCallback != null) {
+				errorCallback.onHandshakeError(responseLines.toString(), e);
+			}
+			throw e;
 		}
 
 		String secWebsocketProtocolHeader = (String) headerMap.get(HTTP_HEADER_SEC_WEBSOCKET_PROTOCOL);
 		if (secWebsocketProtocolHeader == null) {
-			throw new IOException("WebSocket Response header: empty sec-websocket-protocol");
+			IOException e = new IOException("WebSocket Response header: empty sec-websocket-protocol");
+			if (errorCallback != null) {
+				errorCallback.onHandshakeError(responseLines.toString(), e);
+			}
+			throw e;
 		}
 
 		if(!headerMap.containsKey(HTTP_HEADER_SEC_WEBSOCKET_ACCEPT)){
-			throw new IOException("WebSocket Response header: Missing Sec-WebSocket-Accept");
+			IOException e = new IOException("WebSocket Response header: Missing Sec-WebSocket-Accept");
+			if (errorCallback != null) {
+				errorCallback.onHandshakeError(responseLines.toString(), e);
+			}
+			throw e;
 		}
 
 		try {
 			verifyWebSocketKey(key, (String)headerMap.get(HTTP_HEADER_SEC_WEBSOCKET_ACCEPT));
 		} catch (NoSuchAlgorithmException e) {
-			throw new IOException(e.getMessage());
+			IOException ew = new IOException(e.getMessage());
+			if (errorCallback != null) {
+				errorCallback.onHandshakeError(responseLines.toString(), ew);
+			}
+			throw ew;
 		} catch (HandshakeFailedException e) {
-			throw new IOException("WebSocket Response header: Incorrect Sec-WebSocket-Key");
+			IOException ew =  new IOException("WebSocket Response header: Incorrect Sec-WebSocket-Key");
+			if (errorCallback != null) {
+				errorCallback.onHandshakeError(responseLines.toString(), ew);
+			}
+			throw ew;
 		}
 
 	}
