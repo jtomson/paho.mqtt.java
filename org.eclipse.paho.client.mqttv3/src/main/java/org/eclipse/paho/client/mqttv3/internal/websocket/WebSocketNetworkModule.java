@@ -21,7 +21,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.nio.ByteBuffer;
-import java.util.Properties;
+import java.util.Map;
 
 import javax.net.SocketFactory;
 
@@ -39,9 +39,10 @@ public class WebSocketNetworkModule extends TCPNetworkModule {
 	private String uri;
 	private String host;
 	private int port;
-	private Properties customWebsocketHeaders;
+	private Map<String, String> customWebsocketHeaders;
 	private PipedInputStream pipedInputStream;
 	private WebSocketReceiver webSocketReceiver;
+	private final boolean skipPortDuringHandshake;
 	ByteBuffer recievedPayload;
 	
 	/**
@@ -51,20 +52,20 @@ public class WebSocketNetworkModule extends TCPNetworkModule {
 	 */
 	private ByteArrayOutputStream outputStream = new ExtendedByteArrayOutputStream(this);
 
-	public WebSocketNetworkModule(SocketFactory factory, String uri, String host, int port, String resourceContext, Properties customWebsocketHeaders, IMqttDns dns){
+	public WebSocketNetworkModule(SocketFactory factory, String uri, String host, int port, String resourceContext, Map<String, String> customWebsocketHeaders, boolean skipPortDuringHandshake, IMqttDns dns){
 		super(factory, host, port, resourceContext, dns);
 		this.uri = uri;
 		this.host = host;
 		this.port = port;
 		this.customWebsocketHeaders = customWebsocketHeaders;
 		this.pipedInputStream = new PipedInputStream();
-		
+		this.skipPortDuringHandshake = skipPortDuringHandshake;
 		log.setResourceName(resourceContext);
 	}
 	
 	public void start() throws IOException, MqttException {
 		super.start();
-		WebSocketHandshake handshake = new WebSocketHandshake(getSocketInputStream(), getSocketOutputStream(), uri, host, port, customWebsocketHeaders);
+		WebSocketHandshake handshake = new WebSocketHandshake(getSocketInputStream(), getSocketOutputStream(), uri, host, port, customWebsocketHeaders, skipPortDuringHandshake);
 		handshake.execute();
 		this.webSocketReceiver = new WebSocketReceiver(getSocketInputStream(), pipedInputStream);
 		webSocketReceiver.start("webSocketReceiver");
