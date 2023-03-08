@@ -52,7 +52,7 @@ public class WebSocketNetworkModuleFactory implements NetworkModuleFactory {
 			throw ExceptionHelper.createMqttException(MqttException.REASON_CODE_SOCKET_FACTORY_MISMATCH);
 		}
 		WebSocketNetworkModule netModule = new WebSocketNetworkModule(factory, brokerUri.toString(), host, port,
-				clientId, options.getCustomWebSocketHeaders(), options.isSkipPortDuringHandshake());
+				clientId, options.getCustomWebSocketHeaders(), options.isSkipPortDuringHandshake(), options.getDns());
 		netModule.setConnectTimeout(options.getConnectionTimeout());
 		return netModule;
 	}

@@ -25,6 +25,7 @@ import java.util.Map;
 
 import javax.net.SocketFactory;
 
+import org.eclipse.paho.client.mqttv3.IMqttDns;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.internal.TCPNetworkModule;
 import org.eclipse.paho.client.mqttv3.logging.Logger;
@@ -50,9 +51,9 @@ public class WebSocketNetworkModule extends TCPNetworkModule {
 	 *  Frame before passing it through to the real socket.
 	 */
 	private ByteArrayOutputStream outputStream = new ExtendedByteArrayOutputStream(this);
-  
-	public WebSocketNetworkModule(SocketFactory factory, String uri, String host, int port, String resourceContext, Map<String, String> customWebsocketHeaders, boolean skipPortDuringHandshake){
-		super(factory, host, port, resourceContext);
+
+	public WebSocketNetworkModule(SocketFactory factory, String uri, String host, int port, String resourceContext, Map<String, String> customWebsocketHeaders, boolean skipPortDuringHandshake, IMqttDns dns){
+		super(factory, host, port, resourceContext, dns);
 		this.uri = uri;
 		this.host = host;
 		this.port = port;
@@ -64,7 +65,7 @@ public class WebSocketNetworkModule extends TCPNetworkModule {
 	
 	public void start() throws IOException, MqttException {
 		super.start();
-		WebSocketHandshake handshake = new WebSocketHandshake(getSocketInputStream(), getSocketOutputStream(), uri, host, port, customWebsocketHeaders, skipPortDuringHandshake);
+		WebSocketHandshake handshake = new WebSocketHandshake(getSocketInputStream(), getSocketOutputStream(), uri, host, port, customWebsocketHeaders, skipPortDuringHandshake, null);
 		handshake.execute();
 		this.webSocketReceiver = new WebSocketReceiver(getSocketInputStream(), pipedInputStream);
 		webSocketReceiver.start("webSocketReceiver");
